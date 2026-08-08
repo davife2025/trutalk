@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@platform/ui";
+import { Button, Card } from "@trutalk/ui";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignUpPage() {

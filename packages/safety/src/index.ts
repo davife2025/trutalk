@@ -27,7 +27,7 @@
  * ============================================================================
  */
 
-import type { RiskLevel } from "@platform/types";
+import type { RiskLevel } from "@trutalk/types";
 
 export interface CrisisResource {
   name: string;
@@ -75,6 +75,76 @@ export function classifyMessage(rawText: string): ClassificationResult {
   }
 
   return { riskLevel: "none", matchedSignal: false };
+}
+
+export type ClassificationSource = "keyword" | "llm" | "llm-unavailable-fallback";
+
+export interface LayeredClassificationResult extends ClassificationResult {
+  source: ClassificationSource;
+}
+
+/**
+ * Function signature for an injectable LLM-based second-layer classifier.
+ * packages/safety deliberately does NOT depend on packages/llm directly —
+ * apps/api wires the two together (see apps/api/src/services/llmService.ts)
+ * so this package stays testable and dependency-light on its own.
+ */
+export type LlmRiskClassifierFn = (
+  text: string
+) => Promise<{ riskLevel: RiskLevel; reasoning?: string } | null>;
+
+/**
+ * Two-layer classification: fast keyword pass first (catches direct language
+ * with near-zero latency/cost), then — for anything the keyword pass didn't
+ * already flag as high — an LLM-based second pass that can catch indirect
+ * and Pidgin phrasing the keyword list structurally cannot (see Session 6's
+ * eval results: 7 of 8 indirect/Pidgin high-risk test cases were missed by
+ * the keyword-only classifier).
+ *
+ * FAILURE HANDLING — this is a deliberate, debatable design call, not an
+ * obvious "right answer"; revisit it if your data suggests otherwise:
+ *
+ * When the LLM layer fails (network error, timeout, unparseable response),
+ * this falls back to the KEYWORD LAYER'S OWN RESULT rather than blanket-
+ * escalating to "high". Reasoning, discovered by actually testing this
+ * against an unreachable LLM backend: the classifier and the reply-generator
+ * share the same LLM provider, so a full outage means every single message
+ * — including completely mundane ones — would fail the LLM layer. Blanket-
+ * escalating all of those to "high" would mean showing crisis hotline
+ * resources for messages like "feeling okay today", for as long as the
+ * outage lasts. That's mass false alarming, which risks eroding user trust
+ * in genuine crisis warnings (alarm fatigue) — arguably a worse outcome than
+ * falling back to the keyword layer's already-established baseline
+ * coverage. The keyword layer still catches direct high-risk language on
+ * its own regardless of LLM availability; only indirect/Pidgin phrasing
+ * loses its second layer of protection during an outage, and that gap
+ * should be closed by monitoring `classification_source` in
+ * crisis_escalation_events for "llm-unavailable-fallback" spikes and fixing
+ * the outage — not by making every user's every message look like a crisis.
+ */
+export async function classifyMessageLayered(
+  rawText: string,
+  llmClassify?: LlmRiskClassifierFn
+): Promise<LayeredClassificationResult> {
+  const fast = classifyMessage(rawText);
+
+  if (fast.riskLevel === "high") {
+    return { ...fast, source: "keyword" };
+  }
+
+  if (!llmClassify) {
+    return { ...fast, source: "keyword" };
+  }
+
+  const llmResult = await llmClassify(rawText);
+
+  if (!llmResult) {
+    // LLM layer unavailable — fall back to the keyword layer's own result.
+    // See the design-rationale comment above this function.
+    return { ...fast, source: "llm-unavailable-fallback" };
+  }
+
+  return { riskLevel: llmResult.riskLevel, matchedSignal: true, source: "llm" };
 }
 
 /**

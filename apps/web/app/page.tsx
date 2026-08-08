@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button, Card } from "@platform/ui";
+import { Button, Card } from "@trutalk/ui";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/AppHeader";
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Card } from "@platform/ui";
+import { Button, Card } from "@trutalk/ui";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
 

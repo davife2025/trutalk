@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Card } from "@platform/ui";
+import { Button, Card } from "@trutalk/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
@@ -33,7 +33,7 @@ export default function JournalPage() {
 
     if (data && data.length > 0) {
       const pick = data[Math.floor(Math.random() * data.length)];
-      setPrompt(pick.title);
+      if (pick) setPrompt(pick.title);
     } else {
       setPrompt("What's one thing on your mind right now?");
     }

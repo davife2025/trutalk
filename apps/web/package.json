@@ -1,5 +1,5 @@
 {
-  "name": "@platform/web",
+  "name": "@trutalk/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@platform/supabase-client": "workspace:*",
-    "@platform/types": "workspace:*",
-    "@platform/ui": "workspace:*",
+    "@trutalk/supabase-client": "workspace:*",
+    "@trutalk/types": "workspace:*",
+    "@trutalk/ui": "workspace:*",
     "next": "14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

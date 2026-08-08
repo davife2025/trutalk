@@ -22,7 +22,7 @@
  *    so they don't erode trust in the product if they fire constantly
  */
 
-import type { RiskLevel } from "@platform/types";
+import type { RiskLevel } from "@trutalk/types";
 
 export interface EvalCase {
   id: string;

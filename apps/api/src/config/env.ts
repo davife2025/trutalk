@@ -14,4 +14,10 @@ export const env = {
   supabaseUrl: required("SUPABASE_URL", process.env.SUPABASE_URL),
   supabaseServiceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY),
   huggingFaceApiToken: required("HUGGINGFACE_API_TOKEN", process.env.HUGGINGFACE_API_TOKEN),
+  // Comma-separated list, e.g. "https://trutalk.app,https://staging.trutalk.app".
+  // Falls back to localhost dev origins only — never defaults to "*" in production.
+  allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card } from "@platform/ui";
+import { Card } from "@trutalk/ui";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
 import { AppHeader } from "@/components/AppHeader";

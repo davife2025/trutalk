@@ -1,7 +1,7 @@
 /**
  * Evaluation harness runner for packages/safety.
  *
- * Usage: pnpm --filter @platform/safety eval
+ * Usage: pnpm --filter @trutalk/safety eval
  *
  * Exits with a non-zero code if any HIGH-risk case is missed (a false
  * negative on a high-risk case is the one failure mode this project treats

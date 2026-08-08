@@ -1,5 +1,5 @@
 {
-  "name": "@platform/api",
+  "name": "@trutalk/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@platform/llm": "workspace:*",
-    "@platform/safety": "workspace:*",
-    "@platform/supabase-client": "workspace:*",
-    "@platform/types": "workspace:*",
+    "@trutalk/llm": "workspace:*",
+    "@trutalk/safety": "workspace:*",
+    "@trutalk/supabase-client": "workspace:*",
+    "@trutalk/types": "workspace:*",
     "fastify": "^4.28.1",
     "@fastify/cors": "^9.0.1",
     "dotenv": "^16.4.5"

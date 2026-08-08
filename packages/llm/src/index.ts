@@ -78,6 +78,73 @@ export class KimiK2Client {
   }
 }
 
+export type LlmRiskLevel = "none" | "watch" | "high";
+
+export interface LlmRiskClassification {
+  riskLevel: LlmRiskLevel;
+  reasoning: string;
+}
+
+const RISK_CLASSIFIER_SYSTEM_PROMPT = `
+You are a safety classifier for a mental wellness app used in Nigeria. Classify
+the user's message into exactly one risk level, considering English, Nigerian
+Pidgin, and indirect/euphemistic phrasing:
+
+- "high": any indication of suicidal ideation, self-harm, wanting to die, or
+  giving up on life — whether stated directly or indirectly, in any dialect.
+  Examples of indirect high-risk phrasing: "I don't want to be here anymore",
+  "everyone would be better off without me", "I no wan live again".
+- "watch": hopelessness or significant distress without explicit ideation of
+  death or self-harm (e.g. "I can't go on like this", "nothing matters
+  anymore").
+- "none": everyday stress, venting, or idiomatic language that uses
+  crisis-adjacent words non-literally (e.g. "this deadline is killing me").
+
+When genuinely uncertain between two levels, choose the HIGHER risk level —
+a false alarm costs far less here than a missed crisis signal.
+
+Respond with ONLY a JSON object, no other text, no markdown formatting:
+{"riskLevel": "none" | "watch" | "high", "reasoning": "one short sentence"}
+`.trim();
+
+/**
+ * LLM-based risk classification, meant to run as a SECOND layer behind the
+ * fast keyword classifier in packages/safety (see classifyMessageLayered) —
+ * not as a replacement for it. Catches indirect/Pidgin phrasing the keyword
+ * list structurally cannot.
+ *
+ * Returns null on ANY failure (network error, non-200, unparseable response,
+ * invalid riskLevel value) — the caller is responsible for failing safe
+ * (see packages/safety's design rules: default to the higher risk level when
+ * uncertain). This function deliberately never throws so a flaky network
+ * call can't crash the request path; it also never silently defaults to
+ * "none" on failure, which would be the unsafe direction.
+ */
+export async function classifyRisk(
+  client: KimiK2Client,
+  text: string
+): Promise<LlmRiskClassification | null> {
+  try {
+    const result = await client.chatCompletion(
+      [
+        { role: "system", content: RISK_CLASSIFIER_SYSTEM_PROMPT },
+        { role: "user", content: text },
+      ],
+      { temperature: 0, maxTokens: 100 }
+    );
+
+    const cleaned = result.content.trim().replace(/^```json\s*|```$/g, "");
+    const parsed = JSON.parse(cleaned) as { riskLevel?: string; reasoning?: string };
+
+    if (parsed.riskLevel === "none" || parsed.riskLevel === "watch" || parsed.riskLevel === "high") {
+      return { riskLevel: parsed.riskLevel, reasoning: parsed.reasoning ?? "" };
+    }
+    return null; // unexpected value — caller fails safe
+  } catch {
+    return null; // network error, non-200, JSON parse failure, etc. — caller fails safe
+  }
+}
+
 /** Convenience factory reading from process.env — call from apps/api only. */
 export function createKimiK2ClientFromEnv(): KimiK2Client {
   return new KimiK2Client({
