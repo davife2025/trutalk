@@ -1,6 +1,13 @@
+import Link from "next/link";
 import { Button, Card } from "@platform/ui";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
       <div>
@@ -13,12 +20,25 @@ export default function HomePage() {
 
       <Card>
         <p className="text-sm text-calm-600">
-          This is a Session 1 scaffold. Mood check-in, breathing exercises, and
-          the AI wellness chat all wire up here in subsequent sessions.
+          {user
+            ? `Signed in as ${user.email}. Your wellness chat is ready.`
+            : "Session 2: authentication is now wired end-to-end via Supabase."}
         </p>
       </Card>
 
-      <Button variant="primary">Get started</Button>
+      {user ? (
+        <Link href="/chat">
+          <Button variant="primary" className="w-full">
+            Go to chat
+          </Button>
+        </Link>
+      ) : (
+        <Link href="/auth/sign-up">
+          <Button variant="primary" className="w-full">
+            Get started
+          </Button>
+        </Link>
+      )}
     </main>
   );
 }
