@@ -5,6 +5,7 @@ import { Button, Card } from "@platform/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
+import { AppHeader } from "@/components/AppHeader";
 
 interface DisplayMessage {
   role: "user" | "assistant";
@@ -41,6 +42,25 @@ export default function ChatPage() {
 
       if (existing) {
         setSessionId(existing.id);
+
+        // Load persisted history for this session so a page refresh doesn't
+        // wipe the conversation — messages were already being saved server-side
+        // since Session 1, just never read back until now.
+        const { data: history } = await supabase
+          .from("chat_messages")
+          .select("role, content, risk_flag")
+          .eq("session_id", existing.id)
+          .order("created_at", { ascending: true });
+
+        if (history) {
+          setMessages(
+            history.map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              riskLevel: m.risk_flag as "none" | "watch" | "high",
+            }))
+          );
+        }
         return;
       }
 
@@ -106,6 +126,7 @@ export default function ChatPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 p-6 pb-20">
+      <AppHeader />
       <h1 className="text-xl font-semibold">Wellness Chat</h1>
 
       <div className="flex-1 space-y-3 overflow-y-auto">

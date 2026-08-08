@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button, Card } from "@platform/ui";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { AppHeader } from "@/components/AppHeader";
 
 export default async function HomePage() {
   const supabase = createServerSupabaseClient();
@@ -10,8 +11,9 @@ export default async function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
+      <AppHeader />
       <div>
-        <h1 className="text-2xl font-semibold text-calm-900">Welcome</h1>
+        <h1 className="text-2xl font-semibold text-calm-900">Welcome to TruTalk</h1>
         <p className="mt-2 text-calm-600">
           A calm place to check in, breathe, and talk things through — not a
           replacement for professional care, just a place to start.

@@ -1,9 +1,11 @@
 {
-  "name": "mental-health-platform",
+  "name": "trutalk",
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@9.0.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

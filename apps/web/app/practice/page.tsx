@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@platform/ui";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
+import { AppHeader } from "@/components/AppHeader";
 
 interface ContentRow {
   id: string;
@@ -59,6 +60,7 @@ export default function PracticeLibraryPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 p-6 pb-20">
+      <AppHeader />
       <div>
         <h1 className="text-xl font-semibold">Practice</h1>
         <p className="mt-1 text-sm text-calm-600">

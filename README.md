@@ -1,4 +1,4 @@
-# Mental Health & Stress Relief Platform — Monorepo
+# TruTalk — Mental Health & Stress Relief Platform (Monorepo)
 
 ## Stack
 - **Monorepo**: pnpm workspaces + Turborepo

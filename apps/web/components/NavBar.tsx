@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/checkin", label: "Check-in" },
   { href: "/practice", label: "Practice" },
   { href: "/journal", label: "Journal" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function NavBar() {

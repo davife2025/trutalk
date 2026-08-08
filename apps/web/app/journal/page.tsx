@@ -5,6 +5,7 @@ import { Button, Card } from "@platform/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
+import { AppHeader } from "@/components/AppHeader";
 
 interface JournalRow {
   id: string;
@@ -84,6 +85,7 @@ export default function JournalPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 p-6 pb-20">
+      <AppHeader />
       <h1 className="text-xl font-semibold">Journal</h1>
 
       <Card>

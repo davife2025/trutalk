@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Wellness Companion",
-  description: "Everyday stress and mental wellness support.",
+  title: "TruTalk",
+  description: "TruTalk — everyday stress and mental wellness support.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
