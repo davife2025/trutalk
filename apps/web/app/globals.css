@@ -5,3 +5,12 @@
 body {
   @apply bg-calm-50 text-calm-900;
 }
+
+@keyframes breathe {
+  0%, 100% { transform: scale(0.82); opacity: 0.85; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.breathing-circle {
+  animation: breathe 8s ease-in-out infinite;
+}

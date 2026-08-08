@@ -38,6 +38,11 @@ export default async function HomePage() {
               Wellness chat
             </Button>
           </Link>
+          <Link href="/practice">
+            <Button variant="secondary" className="w-full">
+              Practice library
+            </Button>
+          </Link>
           <Link href="/journal">
             <Button variant="secondary" className="w-full">
               Journal
