@@ -27,11 +27,23 @@ export default async function HomePage() {
       </Card>
 
       {user ? (
-        <Link href="/chat">
-          <Button variant="primary" className="w-full">
-            Go to chat
-          </Button>
-        </Link>
+        <div className="flex flex-col gap-2">
+          <Link href="/checkin">
+            <Button variant="primary" className="w-full">
+              Daily check-in
+            </Button>
+          </Link>
+          <Link href="/chat">
+            <Button variant="secondary" className="w-full">
+              Wellness chat
+            </Button>
+          </Link>
+          <Link href="/journal">
+            <Button variant="secondary" className="w-full">
+              Journal
+            </Button>
+          </Link>
+        </div>
       ) : (
         <Link href="/auth/sign-up">
           <Button variant="primary" className="w-full">

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Card } from "@platform/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { NavBar } from "@/components/NavBar";
 
 interface DisplayMessage {
   role: "user" | "assistant";
@@ -104,7 +105,7 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 p-6">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-4 p-6 pb-20">
       <h1 className="text-xl font-semibold">Wellness Chat</h1>
 
       <div className="flex-1 space-y-3 overflow-y-auto">
@@ -142,6 +143,8 @@ export default function ChatPage() {
           {sending ? "..." : "Send"}
         </Button>
       </div>
+
+      <NavBar />
     </main>
   );
 }
