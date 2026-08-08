@@ -1,0 +1,11 @@
+project_id = "mental-health-platform"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[auth]
+enabled = true
