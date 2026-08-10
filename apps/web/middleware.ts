@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * protected routes (currently just /chat — extend this list as more
  * authenticated-only pages are added).
  */
-const PROTECTED_PATHS = ["/chat", "/checkin", "/journal", "/practice", "/settings"];
+const PROTECTED_PATHS = ["/chat", "/checkin", "/journal", "/practice", "/settings", "/upgrade", "/billing"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });

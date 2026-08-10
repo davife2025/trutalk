@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Button, Card } from "@trutalk/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -12,12 +13,13 @@ interface DisplayMessage {
   content: string;
   riskLevel?: "none" | "watch" | "high";
   resources?: { name: string; phone: string | null }[];
+  paywall?: boolean;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 export default function ChatPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -89,11 +91,18 @@ export default function ChatPage() {
     setSending(true);
 
     try {
+      if (!session?.access_token) throw new Error("No active session");
+
       const res = await fetch(`${API_BASE_URL}/chat/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // The API verifies this token server-side and derives the real
+          // user id from it — it no longer trusts a client-supplied userId
+          // at all (see Session 11's security review).
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
-          userId: user.id,
           sessionId,
           message: userMessage.content,
           history,
@@ -105,7 +114,13 @@ export default function ChatPage() {
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.content, riskLevel: data.riskLevel, resources: data.resources },
+        {
+          role: "assistant",
+          content: data.content,
+          riskLevel: data.riskLevel,
+          resources: data.resources,
+          paywall: data.paywall,
+        },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -144,6 +159,13 @@ export default function ChatPage() {
                     </li>
                   ))}
                 </ul>
+              </Card>
+            )}
+            {m.paywall && (
+              <Card className="mt-2 border-calm-400">
+                <Link href="/upgrade">
+                  <Button className="w-full">Upgrade to Premium</Button>
+                </Link>
               </Card>
             )}
           </div>

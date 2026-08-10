@@ -2,20 +2,61 @@ import type { FastifyInstance } from "fastify";
 import { classifyMessageLayered, CRISIS_RESOURCES, CRISIS_RESPONSE_MESSAGE } from "@trutalk/safety";
 import { getWellnessCoachReply, classifyMessageRisk } from "../services/llmService";
 import { supabaseAdmin } from "../services/supabaseAdmin";
+import { getAuthenticatedUserId } from "../plugins/auth";
+import { getSubscriptionStatus, isWithinFreeQuota } from "../services/subscriptionService";
 
 interface ChatRequestBody {
-  userId: string;
+  // userId is still accepted for backward compatibility with older client
+  // builds during rollout, but is NEVER trusted — see the auth check below.
+  userId?: string;
   sessionId: string;
   message: string;
   history?: { role: "user" | "assistant"; content: string }[];
 }
 
+const MAX_MESSAGE_LENGTH = 4000;
+const MAX_HISTORY_MESSAGES = 20;
+
 export async function chatRoutes(app: FastifyInstance) {
   app.post<{ Body: ChatRequestBody }>("/chat/message", async (request, reply) => {
-    const { userId, sessionId, message, history = [] } = request.body;
+    // ---- AUTH: verify the caller, never trust request.body.userId. ----
+    // See apps/api/src/plugins/auth.ts for the full story on why this was
+    // added — every route previously trusted a client-supplied userId with
+    // no verification at all, which was a real vulnerability under a
+    // service-role-key API.
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
+      return reply.code(401).send({ error: "Missing or invalid authorization token" });
+    }
+
+    const { sessionId, message, history = [] } = request.body;
 
     if (!message?.trim()) {
       return reply.code(400).send({ error: "message is required" });
+    }
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return reply.code(400).send({ error: `message exceeds ${MAX_MESSAGE_LENGTH} characters` });
+    }
+    if (history.length > MAX_HISTORY_MESSAGES) {
+      return reply.code(400).send({ error: `history exceeds ${MAX_HISTORY_MESSAGES} messages` });
+    }
+    if (!sessionId) {
+      return reply.code(400).send({ error: "sessionId is required" });
+    }
+
+    // ---- Verify the session actually belongs to the authenticated user. ----
+    // Defense in depth: even with userId now verified, a user could still
+    // try to write into another user's chat_sessions row by passing their
+    // sessionId. This confirms ownership before proceeding.
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from("chat_sessions")
+      .select("id")
+      .eq("id", sessionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (sessionError || !session) {
+      return reply.code(403).send({ error: "sessionId does not belong to the authenticated user" });
     }
 
     // ---- STEP 1: safety classification runs BEFORE anything else. ----
@@ -55,6 +96,30 @@ export async function chatRoutes(app: FastifyInstance) {
         });
 
       return;
+    }
+
+    // ---- STEP 1.5: free-tier quota check — THIS IS THE MONETIZATION GATE. ----
+    // Placement matters: this runs strictly AFTER the crisis check above and
+    // ONLY for non-high-risk messages. Crisis intervention is never, under
+    // any circumstances, gated behind a paywall — that would be both an
+    // ethical failure and a very fast way to end up in the kind of lawsuit
+    // covered in the original research archive. A free user in genuine
+    // crisis gets the same crisis response as a paying one, always.
+    const subscription = await getSubscriptionStatus(userId);
+    const isPremium = subscription.status === "active";
+
+    if (!isPremium) {
+      const withinQuota = await isWithinFreeQuota(userId);
+      if (!withinQuota) {
+        return reply.send({
+          role: "assistant",
+          paywall: true,
+          content:
+            "You've reached today's free message limit. Upgrade to TruTalk Premium for " +
+            "unlimited conversations, or come back tomorrow — check-ins, journaling, and the " +
+            "practice library stay free either way.",
+        });
+      }
     }
 
     // ---- STEP 2: normal wellness-coach conversation flow. ----

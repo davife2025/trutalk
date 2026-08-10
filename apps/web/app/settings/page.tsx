@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button, Card } from "@trutalk/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { NavBar } from "@/components/NavBar";
 import { AppHeader } from "@/components/AppHeader";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 const LOCALES: { value: string; label: string }[] = [
   { value: "en", label: "English" },
@@ -17,7 +20,7 @@ const LOCALES: { value: string; label: string }[] = [
 ];
 
 export default function SettingsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const supabase = createClient();
   const router = useRouter();
 
@@ -27,6 +30,17 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetch(`${API_BASE_URL}/billing/status`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setSubscriptionStatus(data.status))
+      .catch(() => setSubscriptionStatus(null));
+  }, [session]);
 
   useEffect(() => {
     if (!user) return;
@@ -110,6 +124,23 @@ export default function SettingsPage() {
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : saved ? "Saved" : "Save changes"}
         </Button>
+      </Card>
+
+      <Card>
+        <p className="text-sm font-medium text-calm-600">Subscription</p>
+        <p className="mt-1 text-lg font-semibold">
+          {subscriptionStatus === "active" ? "TruTalk Premium" : "Free plan"}
+        </p>
+        {subscriptionStatus !== "active" && (
+          <Link href="/upgrade">
+            <Button className="mt-3 w-full">Upgrade to Premium</Button>
+          </Link>
+        )}
+        {subscriptionStatus === "active" && (
+          <p className="mt-1 text-xs text-calm-600">
+            Manage or cancel your subscription from the receipt email Paystack sent you.
+          </p>
+        )}
       </Card>
 
       <Card>
