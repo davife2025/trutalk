@@ -63,7 +63,7 @@ export default function UpgradePage() {
       <Card className="border-calm-600">
         <p className="text-sm font-medium text-calm-600">Premium</p>
         <p className="mt-1 text-2xl font-semibold">
-          ₦2,500<span className="text-sm font-normal text-calm-600">/month</span>
+          ₦500<span className="text-sm font-normal text-calm-600">/month</span>
         </p>
         <ul className="mt-3 space-y-1 text-sm text-calm-600">
           <li>• Everything in Free</li>
