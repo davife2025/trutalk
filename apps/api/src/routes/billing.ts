@@ -5,6 +5,7 @@ import {
   verifyTransaction,
   verifyWebhookSignature,
 } from "../services/paystackService";
+import { createCheckoutSession, constructVerifiedEvent } from "../services/stripeService";
 import { getSubscriptionStatus, upsertSubscription } from "../services/subscriptionService";
 import { supabaseAdmin } from "../services/supabaseAdmin";
 
@@ -74,6 +75,88 @@ export async function billingRoutes(app: FastifyInstance) {
     return reply.send(status);
   });
 
+  // ---- Stripe: start a checkout session (secondary provider — see
+  // stripeService.ts for why Paystack remains primary for Nigerian users) ----
+  app.post("/billing/stripe/checkout", async (request, reply) => {
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) return reply.code(401).send({ error: "Missing or invalid authorization token" });
+
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const email = authUser.user?.email;
+    if (!email) return reply.code(400).send({ error: "No email on file for this account" });
+
+    try {
+      const result = await createCheckoutSession(email, userId);
+      return reply.send({ checkoutUrl: result.checkoutUrl });
+    } catch (err) {
+      app.log.error({ err }, "Stripe checkout session creation failed");
+      return reply.code(502).send({ error: "Could not start checkout — please try again" });
+    }
+  });
+
+  // ---- Stripe webhook — durable source of truth for Stripe subscription
+  // lifecycle events, same role as the Paystack webhook below. ----
+  app.post("/billing/stripe/webhook", async (request, reply) => {
+    const signature = request.headers["stripe-signature"] as string | undefined;
+    const rawBody = request.rawBody;
+
+    const event = rawBody ? constructVerifiedEvent(rawBody, signature) : null;
+    if (!event) {
+      app.log.warn("Rejected webhook with invalid or missing Stripe signature");
+      return reply.code(401).send({ error: "Invalid signature" });
+    }
+
+    reply.send({ received: true });
+
+    await supabaseAdmin.from("payment_events").insert({
+      event_type: event.type,
+      paystack_reference: event.id, // reused generic column, holds the Stripe event id here
+      raw_status: event.type,
+    });
+
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as {
+          client_reference_id?: string | null;
+          customer?: string | null;
+          subscription?: string | null;
+        };
+        const userId = session.client_reference_id;
+        if (!userId) {
+          app.log.warn("Stripe checkout.session.completed with no client_reference_id");
+          break;
+        }
+        await upsertSubscription({
+          userId,
+          status: "active",
+          plan: "monthly",
+          paymentProvider: "stripe",
+          stripeCustomerId: session.customer ?? undefined,
+          stripeSubscriptionId: session.subscription ?? undefined,
+          currentPeriodEnd: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as { subscription_details?: { metadata?: { userId?: string } } };
+        const userId = invoice.subscription_details?.metadata?.userId;
+        if (userId) await upsertSubscription({ userId, status: "past_due", paymentProvider: "stripe" });
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as { metadata?: { userId?: string } };
+        const userId = sub.metadata?.userId;
+        if (userId) await upsertSubscription({ userId, status: "canceled", paymentProvider: "stripe" });
+        break;
+      }
+
+      default:
+        break;
+    }
+  });
+
   // ---- Paystack webhook — the durable source of truth for subscription
   // lifecycle events (renewals, failed renewals, cancellations). ----
   app.post("/billing/webhook", async (request, reply) => {
@@ -125,6 +208,7 @@ export async function billingRoutes(app: FastifyInstance) {
           userId,
           status: "active",
           plan: planCode ?? "monthly",
+          paymentProvider: "paystack",
           paystackCustomerCode: event.data.customer?.customer_code,
           paystackSubscriptionCode: event.data.subscription_code,
           paystackEmailToken: event.data.customer?.email_token,
@@ -133,12 +217,12 @@ export async function billingRoutes(app: FastifyInstance) {
         break;
 
       case "invoice.payment_failed":
-        await upsertSubscription({ userId, status: "past_due" });
+        await upsertSubscription({ userId, status: "past_due", paymentProvider: "paystack" });
         break;
 
       case "subscription.disable":
       case "subscription.not_renew":
-        await upsertSubscription({ userId, status: "canceled" });
+        await upsertSubscription({ userId, status: "canceled", paymentProvider: "paystack" });
         break;
 
       default:

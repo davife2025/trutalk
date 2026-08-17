@@ -33,4 +33,12 @@ export const env = {
   // this — see routes/chat.ts, the check runs strictly after safety
   // classification and never applies to high-risk messages.
   freeDailyMessageLimit: Number(process.env.FREE_DAILY_MESSAGE_LIMIT ?? 10),
+  // ---- Gemini (safety-classifier second layer — see packages/gemini) ----
+  geminiApiKey: required("GEMINI_API_KEY", process.env.GEMINI_API_KEY),
+  geminiModelId: process.env.GEMINI_MODEL_ID ?? "gemini-2.0-flash",
+  // ---- Stripe (secondary payment provider — Paystack remains primary for
+  // Nigerian customers; Stripe requires a foreign entity, see stripeService.ts) ----
+  stripeSecretKey: required("STRIPE_SECRET_KEY", process.env.STRIPE_SECRET_KEY),
+  stripeWebhookSecret: required("STRIPE_WEBHOOK_SECRET", process.env.STRIPE_WEBHOOK_SECRET),
+  stripePriceIdMonthly: required("STRIPE_PRICE_ID_MONTHLY", process.env.STRIPE_PRICE_ID_MONTHLY),
 };

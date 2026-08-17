@@ -30,8 +30,13 @@ export default async function HomePage() {
 
       {user ? (
         <div className="flex flex-col gap-2">
-          <Link href="/checkin">
+          <Link href="/assessments">
             <Button variant="primary" className="w-full">
+              Take a screening (PHQ-9 / GAD-7)
+            </Button>
+          </Link>
+          <Link href="/checkin">
+            <Button variant="secondary" className="w-full">
               Daily check-in
             </Button>
           </Link>

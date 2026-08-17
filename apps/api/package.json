@@ -10,17 +10,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "@trutalk/gemini": "workspace:*",
     "@trutalk/llm": "workspace:*",
     "@trutalk/safety": "workspace:*",
     "@trutalk/supabase-client": "workspace:*",
     "@trutalk/types": "workspace:*",
+    "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
-    "@fastify/cors": "^9.0.1",
-    "dotenv": "^16.4.5"
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
+    "@types/node": "^20.14.0",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4",
-    "@types/node": "^20.14.0"
+    "typescript": "^5.5.4"
   }
 }

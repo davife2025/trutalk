@@ -16,20 +16,56 @@ function CallbackContent() {
 
   useEffect(() => {
     const reference = searchParams.get("reference");
-    if (!reference || !session?.access_token) return;
+    const provider = searchParams.get("provider");
+    if (!session?.access_token) return;
 
-    (async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/billing/verify?reference=${encodeURIComponent(reference)}`,
-          { headers: { Authorization: `Bearer ${session.access_token}` } }
-        );
-        const data = await res.json();
-        setStatus(data.status === "active" ? "active" : "failed");
-      } catch {
-        setStatus("failed");
-      }
-    })();
+    // ---- Paystack: reference-based verify, calls Paystack directly. ----
+    if (reference) {
+      (async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/billing/verify?reference=${encodeURIComponent(reference)}`,
+            { headers: { Authorization: `Bearer ${session.access_token}` } }
+          );
+          const data = await res.json();
+          setStatus(data.status === "active" ? "active" : "failed");
+        } catch {
+          setStatus("failed");
+        }
+      })();
+      return;
+    }
+
+    // ---- Stripe: no equivalent "verify by session id" endpoint — the
+    // webhook (checkout.session.completed) is the source of truth and fires
+    // independently of this redirect. Poll /billing/status a few times
+    // since the webhook may land a moment before or after the browser
+    // redirect completes, rather than building a second verify endpoint
+    // that would just duplicate what the webhook already does reliably. ----
+    if (provider === "stripe") {
+      let attempts = 0;
+      const poll = async () => {
+        attempts += 1;
+        try {
+          const res = await fetch(`${API_BASE_URL}/billing/status`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const data = await res.json();
+          if (data.status === "active") {
+            setStatus("active");
+            return;
+          }
+        } catch {
+          // fall through to retry/give up below
+        }
+        if (attempts < 5) {
+          setTimeout(poll, 1500);
+        } else {
+          setStatus("failed");
+        }
+      };
+      poll();
+    }
   }, [searchParams, session]);
 
   return (

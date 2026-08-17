@@ -5,6 +5,7 @@ import { healthRoutes } from "./routes/health";
 import { chatRoutes } from "./routes/chat";
 import { checkinRoutes } from "./routes/checkins";
 import { billingRoutes } from "./routes/billing";
+import { assessmentRoutes } from "./routes/assessments";
 import { env } from "./config/env";
 
 export function buildServer() {
@@ -47,6 +48,7 @@ export function buildServer() {
   app.register(chatRoutes);
   app.register(checkinRoutes);
   app.register(billingRoutes);
+  app.register(assessmentRoutes);
 
   return app;
 }

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { classifyMessageLayered, CRISIS_RESOURCES, CRISIS_RESPONSE_MESSAGE } from "@trutalk/safety";
-import { getWellnessCoachReply, classifyMessageRisk } from "../services/llmService";
+import { getWellnessCoachReply } from "../services/llmService";
+import { classifyMessageRiskGemini } from "../services/geminiClassifierService";
 import { supabaseAdmin } from "../services/supabaseAdmin";
 import { getAuthenticatedUserId } from "../plugins/auth";
 import { getSubscriptionStatus, isWithinFreeQuota } from "../services/subscriptionService";
@@ -60,12 +61,16 @@ export async function chatRoutes(app: FastifyInstance) {
     }
 
     // ---- STEP 1: safety classification runs BEFORE anything else. ----
-    // Two layers: fast keyword pass, then an LLM-based pass (see
-    // packages/safety's classifyMessageLayered) for anything the keyword
-    // pass didn't already catch — this is what closes the gap Session 6's
-    // eval harness measured (7 of 8 indirect/Pidgin high-risk cases missed
-    // by keyword matching alone).
-    const classification = await classifyMessageLayered(message, classifyMessageRisk);
+    // Two layers: fast keyword pass, then a Gemini-based second pass (see
+    // packages/gemini + packages/safety's classifyMessageLayered) for
+    // anything the keyword pass didn't already catch — this is what closes
+    // the gap Session 6's eval harness measured (7 of 8 indirect/Pidgin
+    // high-risk cases missed by keyword matching alone). Gemini makes this
+    // call specifically because it's the single highest-stakes decision in
+    // the app — whether to escalate someone to crisis resources — separate
+    // from Kimi K2, which handles the actual wellness-coaching conversation
+    // below in STEP 2.
+    const classification = await classifyMessageLayered(message, classifyMessageRiskGemini);
 
     if (classification.riskLevel === "high") {
       // CRITICAL: the crisis response must reach the user no matter what

@@ -34,9 +34,12 @@ export async function upsertSubscription(params: {
   userId: string;
   status: "active" | "past_due" | "canceled";
   plan?: string | null;
+  paymentProvider?: "paystack" | "stripe";
   paystackCustomerCode?: string | null;
   paystackSubscriptionCode?: string | null;
   paystackEmailToken?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
   currentPeriodEnd?: string | null;
 }) {
   const { error } = await supabaseAdmin.from("subscriptions").upsert(
@@ -44,9 +47,12 @@ export async function upsertSubscription(params: {
       user_id: params.userId,
       status: params.status,
       plan: params.plan ?? undefined,
+      payment_provider: params.paymentProvider ?? undefined,
       paystack_customer_code: params.paystackCustomerCode ?? undefined,
       paystack_subscription_code: params.paystackSubscriptionCode ?? undefined,
       paystack_email_token: params.paystackEmailToken ?? undefined,
+      stripe_customer_id: params.stripeCustomerId ?? undefined,
+      stripe_subscription_id: params.stripeSubscriptionId ?? undefined,
       current_period_end: params.currentPeriodEnd ?? undefined,
       updated_at: new Date().toISOString(),
     },

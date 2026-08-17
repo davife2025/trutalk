@@ -10,16 +10,17 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4
 
 export default function UpgradePage() {
   const { session } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loadingProvider, setLoadingProvider] = useState<"paystack" | "stripe" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubscribe() {
+  async function handleSubscribe(provider: "paystack" | "stripe") {
     if (!session?.access_token) return;
-    setLoading(true);
+    setLoadingProvider(provider);
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/billing/initialize`, {
+      const endpoint = provider === "paystack" ? "/billing/initialize" : "/billing/stripe/checkout";
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -30,12 +31,12 @@ export default function UpgradePage() {
       if (!res.ok) throw new Error("Could not start checkout");
       const data = await res.json();
 
-      // Paystack hosts the actual payment page — we redirect there rather
-      // than handling card details ourselves.
-      window.location.href = data.authorizationUrl;
+      // Both providers host their own payment page — we redirect there
+      // rather than handling card details ourselves.
+      window.location.href = provider === "paystack" ? data.authorizationUrl : data.checkoutUrl;
     } catch {
       setError("Something went wrong starting checkout. Please try again.");
-      setLoading(false);
+      setLoadingProvider(null);
     }
   }
 
@@ -71,11 +72,26 @@ export default function UpgradePage() {
           <li>• Priority access to new features</li>
         </ul>
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-        <Button className="mt-4 w-full" onClick={handleSubscribe} disabled={loading}>
-          {loading ? "Redirecting to checkout..." : "Subscribe with Paystack"}
+
+        <Button
+          className="mt-4 w-full"
+          onClick={() => handleSubscribe("paystack")}
+          disabled={loadingProvider !== null}
+        >
+          {loadingProvider === "paystack" ? "Redirecting to checkout..." : "Subscribe with Paystack"}
         </Button>
-        <p className="mt-2 text-xs text-calm-600">
-          Cards, bank transfer, or USSD via Paystack. Cancel anytime from Settings.
+        <p className="mt-1 text-xs text-calm-600">Cards, bank transfer, or USSD — recommended for Nigerian cards.</p>
+
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          onClick={() => handleSubscribe("stripe")}
+          disabled={loadingProvider !== null}
+        >
+          {loadingProvider === "stripe" ? "Redirecting to checkout..." : "Subscribe with Stripe"}
+        </Button>
+        <p className="mt-1 text-xs text-calm-600">
+          International cards, billed in USD. Cancel anytime from Settings.
         </p>
       </Card>
 
